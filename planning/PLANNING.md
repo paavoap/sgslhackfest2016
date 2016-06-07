@@ -40,3 +40,12 @@ Some available cloud services with free trials that may be useful.
 - Predictive Analytics 2 models, 5,000 predictions per month, and 5 hours of compute time free
 - Google Geocoding API Reverse Geocoding
 - IBM Spark Free 3-month Trial
+
+=============================================================================================
+Comments:
+-- Mapping location to grid should be done prior to Model Builder.
+-- Singapore is about 719 km^2 in size. If we use grids that cover entire Singapore, even if we use big grid like 500m x 500m, that's almost 3000 grids. After removing those grid that have no roads within,  we could still have ~1000 grid. 
+	If we just dump them into the model as parameters, that's not going to give us good models. Maybe we should use longitude and latitude as input prameter?
+Tools that might be useful:
+-- dashDB with R studio integrated for data storage and build model
+-- Node Red. We can use it to pull data periodically and store it to dashDB. And possibly trigger OpenWhisk action 

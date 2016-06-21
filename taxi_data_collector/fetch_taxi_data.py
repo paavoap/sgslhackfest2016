@@ -10,12 +10,13 @@ def main(d):
 
     key = d.get('key')
 
-    ret = { 'status': 200 }
+    d.pop('data', None)
+    ret = d
 
     req = Request(URL, headers = { 'api-key': key })
     res = urlopen(req)
+    ret['status'] = res.getcode()
     if res.getcode() != 200:
-        ret['status'] = res.getcode()
         return ret
 
     # sending the data parsed caused an error "undefined (undefined)"

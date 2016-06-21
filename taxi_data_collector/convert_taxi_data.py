@@ -20,9 +20,10 @@ def main(d):
     if 'data' not in d:
         return { 'error': 'No data in input' }
 
-    data = json.loads(d['data'])
+    data = json.loads(d.pop('data', {}))
+    ret = d
 
-    ret = {'data': convert(data)}
+    ret['data'] = convert(data)
     return ret
 
 if __name__ == '__main__':

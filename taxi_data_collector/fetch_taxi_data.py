@@ -5,8 +5,6 @@ import json
 URL = "https://api.data.gov.sg/v1/transport/taxi-availability"
 
 def main(d):
-    print(d)
-
     if 'key' not in d:
         return { 'error': 'Missing API key' }
 

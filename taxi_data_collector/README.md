@@ -25,7 +25,17 @@ Locally.
 
 To run in OpenWhisk, you need to create an action for the converter script, and also create a sequence which will connect the fetcher to the converter.
 
-
     wsk action create convert-taxi-data convert_taxi_data.py
     wsk action create fetch-and-convert-taxi-data --sequence fetch-taxi-data,convert-taxi-data
     wsk action invoke --blocking --param key YOUR_API_KEY fetch-and-convert-taxi-data
+
+The third script reads the CSV and pushes it into IBM dashDB&trade;. When run locally, it will call the two previous scripts to fetch the taxi data from the API, and to convert it to CSV before pushing it into IBM dashDB&trade;.
+
+    python load_taxi_data.py YOUR_API_KEY DASHDB_HOST DASHDB_PORT DASHDB_USER DASHDB_PASS
+
+To run in OpenWhisk, create an action, create a sequence, and pass in the params.
+
+    wsk action create load-taxi-data load_taxi_data.py
+    wsk action create fetch-and-convert-and-load-taxi-data --sequence fetch-taxi-data,convert-taxi-data,load-taxi-data
+    wsk action invoke --blocking --param key YOUR_API_KEY --param dashdb_host DASHDB_HOST --param dashdb_port DASHDB_PORT --param dashdb_user DASHDB_USER --param dashdb_pass DASHDB_PASS fetch-and-convert-and-load-taxi-data
+    

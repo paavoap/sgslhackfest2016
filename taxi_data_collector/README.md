@@ -38,4 +38,22 @@ To run in OpenWhisk, create an action, create a sequence, and pass in the params
     wsk action create load-taxi-data load_taxi_data.py
     wsk action create fetch-and-convert-and-load-taxi-data --sequence fetch-taxi-data,convert-taxi-data,load-taxi-data
     wsk action invoke --blocking --param key YOUR_API_KEY --param dashdb_host DASHDB_HOST --param dashdb_port DASHDB_PORT --param dashdb_user DASHDB_USER --param dashdb_pass DASHDB_PASS fetch-and-convert-and-load-taxi-data
-    
+
+## Set Up Scheduled Task on OpenWhisk
+
+To set up a scheduled fetch-convert-load task on OpenWhisk use the `/whisk.system/alarms` package. The package provides a feed `/whisk.system/alarms/alarm` which will trigger on a fixed schedule.
+
+This creates all the actions for the sequence and connects it to an alarm that is scheduled every 10 minutes. First create the sequence.
+
+    wsk action create fetch-taxi-data fetch_taxi_data.py
+    wsk action create convert-taxi-data convert_taxi_data.py
+    wsk action create load-taxi-data load_taxi_data.py
+    wsk action create fetch-and-convert-and-load-taxi-data --sequence fetch-taxi-data,convert-taxi-data,load-taxi-data
+
+Then create the scheduled trigger. The `cron` parameter defines the schdule. Here I have it set to every ten minutes. The content of the `trigger_payload` parameter gets sent to the triggered action.
+
+    wsk trigger create taxi-data-fetch-interval --feed /whisk.system/alarms/alarm -p cron '*/10 * * * *' -p trigger_payload '{"key": "YOUR_API_KEY", "dashdb_host": "DASHDB_HOST", "dashdb_port": DASHDB_PORT, "dashdb_user": "DASHDB_USER", "dashdb_pass": "DASHDB_PASS"}'
+
+Finally, connect the trigger to your action sequence.
+
+    wsk rule create --enable taxi-data-collector taxi-data-fetch-interval fetch-and-convert-and-load-taxi-data

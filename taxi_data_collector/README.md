@@ -31,13 +31,13 @@ To run in OpenWhisk, you need to create an action for the converter script, and 
 
 The third script reads the CSV and pushes it into IBM dashDB&trade;. When run locally, it will call the two previous scripts to fetch the taxi data from the API, and to convert it to CSV before pushing it into IBM dashDB&trade;.
 
-    python load_taxi_data.py YOUR_API_KEY DASHDB_HOST DASHDB_PORT DASHDB_USER DASHDB_PASS
+    python load_taxi_data.py YOUR_API_KEY DASHDB_HOST DASHDB_PORT DASHDB_USER DASHDB_PASS DASHDB_SCHEMA DASHDB_TABLE
 
 To run in OpenWhisk, create an action, create a sequence, and pass in the params.
 
     wsk action create load-taxi-data load_taxi_data.py
     wsk action create fetch-and-convert-and-load-taxi-data --sequence fetch-taxi-data,convert-taxi-data,load-taxi-data
-    wsk action invoke --blocking --param key YOUR_API_KEY --param dashdb_host DASHDB_HOST --param dashdb_port DASHDB_PORT --param dashdb_user DASHDB_USER --param dashdb_pass DASHDB_PASS fetch-and-convert-and-load-taxi-data
+    wsk action invoke --blocking --param key YOUR_API_KEY --param dashdb_host DASHDB_HOST --param dashdb_port DASHDB_PORT --param dashdb_user DASHDB_USER --param dashdb_pass DASHDB_PASS --param dashdb_schema DASHDB_SCHEMA --param dashdb_table DASHDB_TABLE fetch-and-convert-and-load-taxi-data
 
 ## Set Up Scheduled Task on OpenWhisk
 
@@ -52,7 +52,7 @@ This creates all the actions for the sequence and connects it to an alarm that i
 
 Then create the scheduled trigger. The `cron` parameter defines the schdule. Here I have it set to every ten minutes. The content of the `trigger_payload` parameter gets sent to the triggered action.
 
-    wsk trigger create taxi-data-fetch-interval --feed /whisk.system/alarms/alarm -p cron '*/10 * * * *' -p trigger_payload '{"key": "YOUR_API_KEY", "dashdb_host": "DASHDB_HOST", "dashdb_port": DASHDB_PORT, "dashdb_user": "DASHDB_USER", "dashdb_pass": "DASHDB_PASS"}'
+    wsk trigger create taxi-data-fetch-interval --feed /whisk.system/alarms/alarm -p cron '*/10 * * * *' -p trigger_payload '{"key": "YOUR_API_KEY", "dashdb_host": "DASHDB_HOST", "dashdb_port": DASHDB_PORT, "dashdb_user": "DASHDB_USER", "dashdb_pass": "DASHDB_PASS", "dashdb_schema": "DASHDB_SCHEMA", "dashdb_table": "DASHDB_TABLE"}'
 
 Finally, connect the trigger to your action sequence.
 

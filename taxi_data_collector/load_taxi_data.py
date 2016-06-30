@@ -3,7 +3,7 @@ import httplib
 import mimetypes
 import json
 
-DASHDB_RESOURCE = '/dashdb-api/load/local/del/DASH7927.TAXI_LOCATIONS?hasHeaderRow=false'
+DASHDB_RESOURCE = '/dashdb-api/load/local/del/%s.%s?hasHeaderRow=false'
 
 # From http://stackoverflow.com/a/681182
 def encode_multipart_formdata(fields, files):
@@ -31,13 +31,8 @@ def get_content_type(filename):
     return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
 
 def new_connection(d):
-    if 'dashdb_host' not in d:
-        return { 'error': 'Missing DashDB host name' }
-    dashdb_host = d['dashdb_host']
-
-    if 'dashdb_port' not in d:
-        return { 'error': 'Missing DashDB port' }
-    dashdb_port = d['dashdb_port']
+    dashdb_host = d.get('dashdb_host', '')
+    dashdb_port = d.get('dashdb_port', '')
 
     return httplib.HTTPSConnection(dashdb_host, dashdb_port)
 
@@ -57,7 +52,10 @@ def make_headers(d, content_type):
 def make_request(conn, d):
     content_type, body = make_body(d)
     headers = make_headers(d, content_type)
-    conn.request('POST', DASHDB_RESOURCE, body, headers)
+    schema = d.get('dashdb_schema', '')
+    table = d.get('dashdb_table', '')
+    resource = DASHDB_RESOURCE % (schema, table)
+    conn.request('POST', resource, body, headers)
 
 def get_response(conn):
     return conn.getresponse()
@@ -88,6 +86,10 @@ if __name__ == '__main__':
         print("Missing argument DashDB username")
     if len(sys.argv) < 6:
         print("Missing argument DashDB password")
+    if len(sys.argv) < 7:
+        print("Missing argument DashDB schema")
+    if len(sys.argv) < 8:
+        print("Missing argument DashDB table")
         sys.exit(1)
 
     key = sys.argv[1]
@@ -100,7 +102,9 @@ if __name__ == '__main__':
         'dashdb_host': host,
         'dashdb_port': port,
         'dashdb_user': user,
-        'dashdb_pass': pwd
+        'dashdb_pass': pwd,
+        'dashdb_schema': schema,
+        'dashdb_table': table
     }
     import fetch_taxi_data as fetch
     d = fetch.main(i)

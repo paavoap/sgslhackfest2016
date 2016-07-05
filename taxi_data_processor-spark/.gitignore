@@ -1,0 +1,7 @@
+vcap.json
+
+target/
+
+*.log
+stdout_*
+stderr_*

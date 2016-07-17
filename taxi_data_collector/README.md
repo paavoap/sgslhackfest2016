@@ -59,3 +59,5 @@ Then create the scheduled trigger. The `cron` parameter defines the schdule. Her
 Finally, connect the trigger to your action sequence.
 
     wsk rule create --enable taxi-data-collector taxi-data-fetch-interval fetch-and-convert-and-load-taxi-data
+
+**Important note.** The `/whisk.system/alarms/alarm` feed will stop after a max number of triggers have fired, and the trigger `taxi-data-fetch-interval` and the rule `taxi-data-collector` need to be deleted and recreated periodically.

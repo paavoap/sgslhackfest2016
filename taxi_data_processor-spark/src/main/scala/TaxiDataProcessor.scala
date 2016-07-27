@@ -38,20 +38,32 @@ object TaxiDataProcessor {
       .withColumnRenamed("C3", "LNG")
   }
 
-  def splitTimestamp(c: Column): Column = {
+  def minuteofday(c: Column): Column = {
     (hour(c) * 60) + minute(c)
   }
 
-  def splitTimestampColumn(df: DataFrame): DataFrame = {
-    df.withColumn("timeofday", splitTimestamp(df("TIMESTAMP")))
+  def dayofweek(c: Column): Column = {
+    date_format(c, "u")
   }
 
-  val createVector = udf[Vector, Int, Double, Double] { (tod, lng, lat) =>
-    Vectors.dense(tod, lng, lat)
+  val coordinatesToGrid = udf[Int, Double, Double] { (lat, lng) =>
+    val maxLAT = 104.0168
+    val minLAT = 103.61368
+    val maxLNG = 1.46989
+    val minLNG = 1.23377
+    val gridH = 0.02
+    val gridW = 0.02
+    val height = maxLAT - minLAT
+    val width = maxLNG - minLNG
+    val hGrids = (height / gridH).toInt
+    val wGrids = (width / gridW).toInt
+    val gridLAT = ((lat - minLAT) / gridH).toInt
+    val gridLNG = ((lng - minLNG) / gridW).toInt
+    (hGrids * gridLNG) + gridLAT
   }
 
-  def createFeatures(df: DataFrame): DataFrame = {
-    df.withColumn("features", createVector(df("timeofday"), df("LAT"), df("LNG")))
+  val createVector = udf[Vector, Int, Double, Double] { (tod, lat, lng) =>
+    Vectors.dense(tod, lat, lng)
   }
 
   def toLabeledPointRDD(df: DataFrame): RDD[LabeledPoint] = {
@@ -63,30 +75,54 @@ object TaxiDataProcessor {
     }
   }
 
+  def summary(df: DataFrame) {
+    df.printSchema
+    df.show(3)
+  }
+
+  def addTimeAndGridColumns(df: DataFrame): DataFrame = {
+    val withTime = df
+      .withColumn("timeofday", minuteofday(df("TIMESTAMP")))
+      .withColumn("dayofweek", dayofweek(df("TIMESTAMP")))
+
+    val withGrid = withTime
+      .withColumn("grid", coordinatesToGrid(withTime("LAT"), withTime("LNG")))
+
+    withGrid
+  }
+
+  def mostPopularGrid(df: DataFrame): Int = {
+    val gridCounts = df
+      .groupBy("grid").count()
+      .orderBy(desc("count"))
+
+    gridCounts.first.getAs[Int]("grid")
+  }
+
   def processData(loader: (SQLContext, Array[String]) => DataFrame, sqlContext: SQLContext, args: Array[String]) {
     val dashdata = loader(sqlContext, args)
+    summary(dashdata)
 
-    //dashdata.registerTempTable("taxidata")
+    val processed = addTimeAndGridColumns(dashdata)
+    summary(processed)
 
-    dashdata.printSchema
-    dashdata.show(3)
+    val grid = mostPopularGrid(processed)
+    println(s"Selected grid ${grid}.")
 
-    //dashdata.groupBy("TIMESTAMP").count().orderBy(desc("count")).show()
+    val selected = processed.filter(processed("grid") === grid)
+    summary(selected)
 
-    val withTime = splitTimestampColumn(dashdata)
+    val grouped = selected
+      .groupBy(selected("timeofday"), selected("dayofweek")).count()
+    summary(grouped)
 
-    withTime.printSchema
-    withTime.show(3)
-
+/*
     val labeled = withTime.withColumn("label", lit(1.0))
+    summary(labeled)
 
-    labeled.printSchema
-    labeled.show(3)
-
-    val vectorized = createFeatures(labeled)
-
-    vectorized.printSchema
-    vectorized.show(3)
+    val vectorized = labeled
+      .withColumn("features", createVector(labeled("timeofday"), labeled("LAT"), df("LNG")))
+    summary(vectorized)
 
     val rdd = toLabeledPointRDD(vectorized)
     //val sc = sqlContext.sparkContext
@@ -108,6 +144,7 @@ object TaxiDataProcessor {
     val ms = new MulticlassMetrics(pAndLs)
     val p = ms.precision
     println("Precision: " + p)
+*/
   }
 
   def runLocal(args: Array[String]) {

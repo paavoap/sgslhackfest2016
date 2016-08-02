@@ -2,14 +2,18 @@ import json
 from StringIO import StringIO
 import csv
 
+# 2016-06-21T19:14:50+08:00
+def split_timestamp(ts):
+    return (ts[:19].replace('T', ' '), ts[19:])
+
 def convert_to_file(data, file):
     csv_w = csv.writer(file)
     fs = data.get('features', [])
     for f in fs:
-        ts = f['properties']['timestamp']
+        (ts, tz) = split_timestamp(f['properties']['timestamp'])
         ps = f['geometry']['coordinates']
         for p in ps:
-            csv_w.writerow([ts, p[0], p[1]])
+            csv_w.writerow([ts, tz, p[0], p[1]])
 
 def convert(data):
     csv_s = StringIO()

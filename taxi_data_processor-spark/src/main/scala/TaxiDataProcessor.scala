@@ -3,6 +3,9 @@ import org.apache.spark._
 import org.apache.spark.mllib.linalg.{Vectors, Vector}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.regression.{LinearRegressionWithSGD, LinearRegressionModel}
+import org.apache.spark.mllib.regression.RegressionModel
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Column}
 import org.apache.spark.sql.SQLContext
@@ -85,7 +88,7 @@ object TaxiDataProcessor {
   }
 
   def dayofweek(c: Column): Column = {
-    date_format(c, "u")
+    date_format(c, "u") - 1
   }
 
   val coordinatesToGrid = udf[Int, Double, Double] { (lat, lng) =>
@@ -170,20 +173,51 @@ object TaxiDataProcessor {
       .withColumnRenamed("count", "label")
     summary(labeled)
 
-    trainLRModel(labeled)
-  }
-
-  // ===========================================
-  // # MACHINE LEARNING
-
-  def trainLRModel(df: DataFrame) {
-    val rdd = toLabeledPointRDD(df)
-    //summary(rdd)
+    val rdd = toLabeledPointRDD(labeled)
+    summary(rdd)
 
     val splits = rdd.randomSplit(Array(0.8, 0.2))
     val training = splits(0).cache()
     val testing = splits(1)
 
+    //trainAndTestLRModel(training, testing)
+    trainAndTestDTModel(training, testing)
+  }
+
+  // ===========================================
+  // # MACHINE LEARNING
+
+  def printTestResults(pAndLs: RDD[(Double, Double)]) {
+      println("\t= Sample")
+      println("\tpredict\tactual")
+      pAndLs.take(3).foreach { case (p, v) => println(f"\t$p%.2f\t$v%.2f") }
+
+      val mse = pAndLs.map { case (p, v) => math.pow((v - p), 2)}.mean()
+      println(f"\t= Mean square error $mse%.2f")
+  }
+
+  def testModel(testing: RDD[LabeledPoint], model: RegressionModel) {
+      val pAndLs = testing.map { case LabeledPoint(l, fs) =>
+        val p = model.predict(fs)
+        (p, l)
+      }
+
+      printTestResults(pAndLs)
+
+  }
+
+  def testModel(testing: RDD[LabeledPoint], model: DecisionTreeModel) {
+      val pAndLs = testing.map { case LabeledPoint(l, fs) =>
+        val p = model.predict(fs)
+        (p, l)
+      }
+
+      printTestResults(pAndLs)
+
+  }
+
+  def trainAndTestLRModel(training: RDD[LabeledPoint], testing: RDD[LabeledPoint]) {
+    // ## Set Initial Parameters
     //val iterationCounts = Array(50, 100, 200, 500)
     val iterationCounts = Array(50)
     //val stepSizes = Array(0.00001, 0.000001, 0.0000001, 0.00000001)
@@ -193,24 +227,39 @@ object TaxiDataProcessor {
     val miniBatchFraction = 1.0
     // Initial weights from a previous run
     val initialWeights = Vectors.dense(0.6722928916506891,0.005505889905483374)
+
+    // ## Train and Test Model With Different Parameters
     for (iterationCount <- iterationCounts; stepSize <- stepSizes) {
-      println("iterationCount "+iterationCount)
-      println("stepSize "+stepSize)
+      println(s"# Training Linear Regression (iterationCount ${iterationCount}, stepSize ${stepSize})")
       //training.take(3).foreach(println)
       val model = LinearRegressionWithSGD.train(training,
         iterationCount, stepSize, miniBatchFraction, initialWeights)
 
-      println("Model intercept "+model.intercept)
-      println("Model weights "+model.weights)
+      println(s"\tModel intercept ${model.intercept}")
+      println(s"\tModel weights ${model.weights}")
 
-      val pAndLs = testing.map { case LabeledPoint(l, fs) =>
-        val p = model.predict(fs)
-        (p, l)
-      }
-      pAndLs.take(3).foreach(println)
+      testModel(testing, model)
+    }
 
-      val mse = pAndLs.map { case (p, v) => math.pow((v - p), 2)}.mean()
-      println("Mean square error " + mse)
+  }
+
+  def trainAndTestDTModel(training: RDD[LabeledPoint], testing: RDD[LabeledPoint]) {
+    // ## Set Initial Parameters
+    val catFeatures = Map[Int, Int](1 -> 7)
+    val impurity = "variance"
+    val maxDepths = Array(5, 6, 7)
+    val maxBinss = Array(32)
+
+    // ## Train and Test Model With Different Parameters
+    for (maxDepth <- maxDepths; maxBins <- maxBinss) {
+      println(s"# Training DecisionTree (maxDepth ${maxDepth}, maxBins ${maxBins})")
+      //training.take(3).foreach(println)
+      val model = DecisionTree.trainRegressor(training,
+        catFeatures, impurity, maxDepth, maxBins)
+
+      println(s"\tModel numNodes ${model.numNodes}")
+
+      testModel(testing, model)
     }
 
   }

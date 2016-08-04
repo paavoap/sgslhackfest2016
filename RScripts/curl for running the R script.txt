@@ -1,0 +1,10 @@
+curl -i -X POST \
+   -H "Authorization:Basic ZGFzaDc5Mjc6MGNjVVZnRHBzeThs" \
+   -H "Content-Type:application/json" \
+   -d \
+'{
+  "arguments": [
+    "0.111,string2"
+  ]
+}' \
+ 'https://dashdb-entry-yp-dal09-07.services.dal.bluemix.net:8443/dashdb-api/rscript/getPrediction.r'

@@ -4,7 +4,7 @@ curl -i -X POST \
    -d \
 '{
   "arguments": [
-    "0.111,string2"
+    "\"Sat Aug 06 2016 17:30:34 GMT+0800 (Malay Peninsula Standard Time)\",123.111,2.000"
   ]
 }' \
  'https://dashdb-entry-yp-dal09-07.services.dal.bluemix.net:8443/dashdb-api/rscript/getPrediction.r'

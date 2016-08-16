@@ -1,3 +1,18 @@
 The DashDB R Rest API:https://developer.ibm.com/clouddataservices/wp-content/themes/projectnext-clouddata/dashDB/
 The BuildModel.r load all the data from DB and build a NN model for a grid. 
 The getPrediction.r load a model(hard coded for now), takes Time of Day as argument to get the prediction.
+
+
+Refer to the CURL script for calling the REST API to execute the "getPrediction.r" script, the arguments should contain the JS time, lat, lon. E.g.
+{
+  "arguments": [
+    "\"Sat Aug 06 2016 7:30:34 GMT+0800 (Malay Peninsula Standard Time)\",103.964567, 1.335705"
+  ]
+}
+
+For coordinate with a valid model, this is the response:
+
+{"message":"NONE","result":{"timestamp":"20160815 14:44:34 UTC","rScriptError":"Loading required package: RODBC\nLoading required package: ibmdbR\nLoading required package: methods\nLoading required package: MASS\nLoading required package: grDevices\nLoading required package: graphics\nLoading required package: stats\nLoading required package: utils\nLoading required package: Matrix\nLoading required package: arules\n\nAttaching package: \u2018arules\u2019\n\nThe following objects are masked from \u2018package:base\u2019:\n\n    %in%, write\n\nLoading required package: rpart\nLoading required package: rpart.plot\nLoading required package: ggplot2\nLoading required package: grid\n","rScriptOutput":"          [,1]\n[1,] 0.5228787\n","filename":"getPrediction.r"},"errorMessageCode":"NONE","resultCode":"SUCCESS"}
+
+where "rScriptOutput":"          [,1]\n[1,] 0.5228787\n"
+contains the prediction 0.5228787. For coordinate without a valid model, a prediction of -1 is returned.
